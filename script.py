@@ -138,6 +138,8 @@ x_train, x_test, y_train, y_test = train_test_split(X_cat_fuzed, y, test_size=1 
 x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + validation_ratio)) 
 
 
+
+
 #print(x_train, x_val, x_test)
 ####machine learning time
 
