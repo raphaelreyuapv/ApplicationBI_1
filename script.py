@@ -5,6 +5,8 @@ import math
 from datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, Normalizer, MaxAbsScaler
+
 demissionaires = pd.read_csv('donnees_banque/table1.csv')
 societaires = pd.read_csv('donnees_banque/table2.csv')
 
@@ -105,6 +107,11 @@ print(societaires)
 
 numerical = societaires[['MTREV','NBENF']]
 categorical = societaires[['CDSEXE','CDSITFAM','CDCATCL','RANGADH']]
+
+normalizer = Normalizer()
+numerical = normalizer.fit_transform(numerical)
+numerical = pd.DataFrame(numerical, columns=['MTREV','NBENF'])
+
 enc = OneHotEncoder(handle_unknown='ignore')
 enc.fit(categorical)
 categorical_one_hot = enc.transform(categorical).toarray()
