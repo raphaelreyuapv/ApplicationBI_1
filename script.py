@@ -138,33 +138,44 @@ from sklearn.model_selection import PredefinedSplit
 from sklearn.dummy import DummyClassifier
 from sklearn.neighbors import KNeighborsClassifier
 #https://datascience.stackexchange.com/questions/15135/train-test-validation-set-splitting-in-sklearn
+#creation des dataset pour les classifieurs
 x_train, x_test, y_train, y_test = train_test_split(X_cat_fuzed, y, test_size=1 - train_ratio,random_state=42)
 
 
 x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + validation_ratio),random_state=48) 
 
-svc_clf = SVC(class_weight='balanced',random_state=40,verbose=True)
+#creation et fit des classifieurs
+svc_clf = SVC(class_weight='balanced',kernel="linear",verbose=True)
 svc_clf.fit(x_train,y_train)
 dummycl = DummyClassifier(strategy="most_frequent")
 dummycl.fit(x_train,y_train)
-neigh_clf = KNeighborsClassifier(n_neighbors=5)
+neigh_clf = KNeighborsClassifier(n_neighbors=5,metric="euclidean")
 neigh_clf.fit(x_train, y_train)
 #ps = PredefinedSplit()
+
+#test des classifieurs
+scores_dummy_val = cross_val_score(dummycl,x_val,y_val,cv=2)
+print("Accuracy of dummy(most frequent) classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_dummy_val.mean(), scores_dummy_val.std() * 2))
+scores_dummy_test = dummycl.score(x_test,y_test)
+print("Accuracy of dummy(most frequent) classifier on Test set: %0.2f" % (scores_dummy_test))
+
 scores_svc_val = cross_val_score(svc_clf,x_val,y_val,cv=2)
 print("Accuracy of SVC classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
 
 scores_svc_test = svc_clf.score(x_test,y_test)
 print("Accuracy of SVC classifier on Test set: %0.2f" % (scores_svc_test))
 
-scores_dummy_val = cross_val_score(dummycl,x_val,y_val,cv=2)
-print("Accuracy of dummy(most frequent) classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_dummy_val.mean(), scores_dummy_val.std() * 2))
-scores_dummy_test = dummycl.score(x_test,y_test)
-print("Accuracy of dummy(most frequent) classifier on Test set: %0.2f" % (scores_dummy_test))
-
+print("SVC Attributes weight")
+#print(svc_clf.coef_)
+#print(svc_clf.feature_names_in_)
+mapping = dict(zip(svc_clf.feature_names_in_,svc_clf.coef_[0]))
+print(mapping)
 scores_knn_val = cross_val_score(neigh_clf,x_val,y_val,cv=2)
 print("Accuracy of K nearest neigh classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_knn_val.mean(), scores_knn_val.std() * 2))
 scores_knn_test = neigh_clf.score(x_test,y_test)
 print("Accuracy of K nearest neigh classifier on Test set: %0.2f" % (scores_knn_test))
+print("KNN effective metric")
+print(neigh_clf.effective_metric_)
 #Bayes=Categorical obliger
 #print(x_train, x_val, x_test)
 ####machine learning time
