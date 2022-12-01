@@ -7,61 +7,29 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, Normalizer, MaxAbsScaler
 
-demissionaires = pd.read_csv('donnees_banque/table1.csv')
-societaires = pd.read_csv('donnees_banque/table2.csv')
-
-#print(societaires.corr()) correlation entre les variables
-#print(societaires.cov()) covariance
-
-
-
-
-#societaires['CDMOTDEM'].fillna('ND', inplace = True)
-
-
-
-demissionaires.drop(['AGEAD','AGEDEM','CDTMT','CDDEM','ADH','ANNEEDEM'],axis=1,inplace=True)
-societaires.drop(['BPADH','CDTMT'],axis=1,inplace=True)
-#print(societaires.dtypes)
-#print(demissionaires['RANGADH'].unique())
-#['7  30-34' '6  25-29' '5  20-24' '4  15-19' '3  10-14' '2  5-9' '1  1-4'
-# nan]
-def getRANGADHfromnum(v):
-    if v <= 4:
-        return 1
-    elif v<= 9:
-        return 2
-    elif v<= 10:
-        return 3
-    elif v<= 15:
-        return 4
-    elif v<= 20:
-        return 5
-    elif v<= 25:
-        return 6
-    elif v<= 30:
-        return 7
-    elif v>30:
-        return 8
-
-
-staple_date = datetime.strptime('30/12/2007','%d/%m/%Y')
-
-def getRANGfromDate(date):
-    date_conv = datetime.strptime(date,'%d/%m/%Y')
-    if (date_conv.year == 1900):
-        return 0
-    else:
-        return getRANGADHfromnum(0)
-    
 def getRANGADH(start,end):
-    
     date_start = datetime.strptime(start, '%d/%m/%Y')
     date_end = datetime.strptime(end, '%d/%m/%Y')
-    if(date_end.year == 1900):
-        return getRANGADHfromnum(staple_date.year - date_start.year)
-    else:
-        return getRANGADHfromnum(date_end.year - date_start.year)
+    v = date_end.year - date_start.year;
+    
+    if v <= 18:
+        return 0
+    elif 19 <= v <= 25:
+        return 1
+    elif 26 <= v<= 30:
+        return 2
+    elif 31 <= v<= 35:
+        return 3
+    elif 36 <= v <= 40:
+        return 4
+    elif 41 <= v<= 45:
+        return 5
+    elif 46 <= v <= 50:
+        return 6
+    elif 51 <= v <= 55:
+        return 7
+    elif v >= 56:
+        return 8
 
 def replaceNans(v):
     if pd.isna(v):
@@ -69,35 +37,23 @@ def replaceNans(v):
     else:
         return "DV"
 
-#print(societaires)
-societaires['RANGADH'] = societaires.apply(lambda x: getRANGADH(x['DTADH'],x['DTDEM']),axis=1)
-#societaires['RANGAGEDEM'] = societaires.apply(lambda x: getRANGfromDate(x['DTDEM']))
+demissionaires = pd.read_csv('donnees_banque/table1.csv')
+societaires = pd.read_csv('donnees_banque/table2.csv')
+
 societaires.drop(societaires[societaires['DTNAIS'] == '0000-00-00' ].index, inplace = True)
 societaires.drop(societaires[societaires['DTNAIS'] == '1900-01-00' ].index, inplace = True)
 
-age_adh = []
-for column, row in societaires[['DTADH', 'DTDEM', 'DTNAIS']].iterrows():
-    dt_nais = datetime.strptime(row['DTNAIS'], '%d/%m/%Y')
-    dt_adh = datetime.strptime(row['DTADH'], '%d/%m/%Y')
-    age_adh.append(getRANGADHfromnum(round(max(0, (dt_adh-dt_nais).days/365))))
-societaires = societaires.drop(['ID', 'DTNAIS', 'DTADH', 'DTDEM'], axis=1)
+societaires['RANGAGEAD'] = societaires.apply(lambda x: getRANGADH(x['DTNAIS'], x['DTADH']),axis=1)
 
-societaires['RANGADH'] = age_adh
+societaires = societaires.drop(['ID', 'DTNAIS', 'DTADH', 'DTDEM', 'BPADH','CDTMT'], axis=1)
 
 demissionaires = demissionaires[societaires.columns]
 demissionaires = demissionaires.dropna()
 
 tmp = []
-for r in demissionaires['RANGADH']:
+for r in demissionaires['RANGAGEAD']:
     tmp.append(int(r.split(' ')[0]))
-demissionaires['RANGADH'] = tmp
-
-print('table 1 : \n', demissionaires.head())
-print('table 2 : \n', societaires.head())
-
-print(demissionaires.dtypes)
-print(societaires.dtypes)
-
+demissionaires['RANGAGEAD'] = tmp
 
 societaires = pd.concat([societaires,demissionaires],axis=0)
 #societaires = societaires.merge(demissionaires,how='outer')
