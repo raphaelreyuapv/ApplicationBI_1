@@ -6,8 +6,11 @@ from datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
+from sklearn import metrics
+from sklearn.metrics import accuracy_score, f1_score,precision_score,recall_score
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, Normalizer, MaxAbsScaler
 from joblib import dump,load
+from sklearn.inspection import permutation_importance
 
 def getRANGADH(start,end):
     date_start = datetime.strptime(start, '%d/%m/%Y')
@@ -119,14 +122,14 @@ x_train_oversampled,x_test_oversampled,y_train_oversample,y_test_oversampled = t
 x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + validation_ratio),random_state=48) 
 x_val_oversampled,x_test_oversampled,y_val_oversampled,y_test_oversampled = train_test_split(x_test_oversampled, y_test_oversampled, test_size=test_ratio/(test_ratio + validation_ratio),random_state=48) 
 #creation et fit des classifieurs
-svc_clf_linear = SVC(class_weight='balanced',kernel="linear")
-svc_clf_poly = SVC(class_weight='balanced',kernel="poly")
-svc_clf_rbf = SVC(class_weight='balanced',kernel="rbf")
-svc_clf_sig = SVC(class_weight='balanced',kernel="sigmoid")
-svc_clf_linear.fit(x_train,y_train)
-svc_clf_poly.fit(x_train,y_train)
+#svc_clf_linear = SVC(class_weight='balanced',kernel="linear")
+#svc_clf_poly = SVC(class_weight='balanced',kernel="poly")
+svc_clf_rbf = SVC(class_weight='balanced',kernel="rbf",C=100,gamma=0.01)
+#svc_clf_sig = SVC(class_weight='balanced',kernel="sigmoid")
+#svc_clf_linear.fit(x_train,y_train)
+#svc_clf_poly.fit(x_train,y_train)
 svc_clf_rbf.fit(x_train,y_train)
-svc_clf_sig.fit(x_train,y_train)
+#svc_clf_sig.fit(x_train,y_train)
 dummycl = DummyClassifier(strategy="most_frequent")
 dummycl.fit(x_train,y_train)
 neigh_clf = KNeighborsClassifier(n_neighbors=5)
@@ -137,41 +140,81 @@ neigh_clf.fit(x_train_oversampled, y_train_oversample)
 scores_dummy_val = cross_val_score(dummycl,x_val,y_val,cv=5)
 print("Accuracy of dummy(most frequent) classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_dummy_val.mean(), scores_dummy_val.std() * 2))
 
-scores_svc_val = cross_val_score(svc_clf_linear,x_val,y_val,cv=5)
-print("Accuracy of SVC classifier(linear kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
-scores_svc_val = cross_val_score(svc_clf_poly,x_val,y_val,cv=5)
-print("Accuracy of SVC classifier(poly kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
-scores_svc_val = cross_val_score(svc_clf_rbf,x_val,y_val,cv=5)
-print("Accuracy of SVC classifier(rbf kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
-scores_svc_val = cross_val_score(svc_clf_sig,x_val,y_val,cv=5)
-print("Accuracy of SVC classifier(sig kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
+#scores_svc_val = cross_val_score(svc_clf_linear,x_val,y_val,cv=5)
+#print("Accuracy of SVC classifier(linear kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
+#scores_svc_val = cross_val_score(svc_clf_poly,x_val,y_val,cv=5)
+#print("Accuracy of SVC classifier(poly kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
+#scores_svc_val = cross_val_score(svc_clf_rbf,x_val,y_val,cv=5)
+#print("Accuracy of SVC classifier(rbf kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
+#scores_svc_val = cross_val_score(svc_clf_sig,x_val,y_val,cv=5)
+#print("Accuracy of SVC classifier(sig kernel) on cross-validation: %0.2f (+/- %0.2f)" % (scores_svc_val.mean(), scores_svc_val.std() * 2))
 
+from sklearn.model_selection import GridSearchCV
 
-
-print("SVC Attributes weight")
+#param_grid = {'C': [0.1, 1, 10, 100, 1000],'gamma': [1, 0.1, 0.01, 0.001, 0.0001],'kernel': ['rbf']}
+param_grid = {'n_neighbors': [2,3,5,7,9], 'weights': ['distance'], 'metric':['minkowski']}
+grid = GridSearchCV(KNeighborsClassifier(),param_grid,refit=True,verbose=3,scoring='accuracy')
+grid.fit(x_train,y_train)
+print("GridSearch best params")
+#print(grid.best_params_)
 #print(svc_clf.coef_)
 #print(svc_clf.feature_names_in_)
-mapping = dict(zip(svc_clf_linear.feature_names_in_,svc_clf_linear.coef_[0]))
-print(mapping)
-for key,value in mapping.items():
-    print("Attribue:",key," Valeur:",value)
-scores_knn_val = cross_val_score(neigh_clf,x_val,y_val,cv=2)
-print("Accuracy of K nearest neigh classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_knn_val.mean(), scores_knn_val.std() * 2))
-print("KNN effective metric")
-print(neigh_clf.effective_metric_)
-print("Fonction de calcul des distances:Minkowski")
+#mapping = dict(zip(svc_clf_linear.feature_names_in_,svc_clf_linear.coef_[0]))
+#print(mapping)
+#for key,value in mapping.items():
+#    print("Attribue:",key," Valeur:",value)
+#scores_knn_val = cross_val_score(neigh_clf,x_val,y_val,cv=2)
+#print("Accuracy of K nearest neigh classifier on cross-validation: %0.2f (+/- %0.2f)" % (scores_knn_val.mean(), scores_knn_val.std() * 2))
+#print("KNN effective metric")
+#print(neigh_clf.effective_metric_)
+#print("Fonction de calcul des distances:Minkowski")
+#C=100, gamma=0.01, kernel=rbf;
 
+##VALIDATION
+##TEST
+print("------VALIDATION-------")
+print("Classification report for dummy classifier")
+y_pred = dummycl.predict(x_val)
+print(metrics.classification_report(y_val,y_pred))
+scores_knn_test = neigh_clf.score(x_val,y_val)
+y_pred = neigh_clf.predict(x_val)
+print("Classification report for knn:")
+print(metrics.classification_report(y_val,y_val))
+y_pred = svc_clf_rbf.predict(x_val)
+print("Classification report for SVC:")
+print(metrics.classification_report(y_val,y_pred))
+print("------TEST-------")
 ##TEST
 scores_dummy_test = dummycl.score(x_test,y_test)
+print("Classification report for dummy classifier")
+y_pred = dummycl.predict(x_test)
+print(metrics.classification_report(y_test,y_pred))
 print("Accuracy of dummy(most frequent) classifier on Test set: %0.2f" % (scores_dummy_test))
 scores_knn_test = neigh_clf.score(x_test,y_test)
+y_pred = neigh_clf.predict(x_test)
+print("Classification report for knn:")
+print(metrics.classification_report(y_test,y_pred))
 print("Accuracy of K nearest neigh classifier on Test set: %0.2f" % (scores_knn_test))
-scores_svc_test = svc_clf_linear.score(x_test,y_test)
-print("Accuracy of SVC classifier(linear kernel) on Test set: %0.2f" % (scores_svc_test))
-
-
+scores_svc_test = svc_clf_rbf.score(x_test,y_test)
+print("Accuracy of SVC classifier(rbf kernel) on Test set: %0.2f" % (scores_svc_test))
+y_pred = svc_clf_rbf.predict(x_test)
+print("Classification report for SVC:")
+print(metrics.classification_report(y_test,y_pred))
+print("-----FEATURE ANALYSIS------")
+print("Feature importance for knn:")
+result = permutation_importance(neigh_clf,x_test,y_test,n_repeats=1,random_state=0)
+features_names_cc = x_test.columns
+feature_importance = pd.DataFrame(result.importances, columns=['Importance'])
+feature_importance['Feature'] = features_names_cc
+print(feature_importance)
+print("Feature importance for SVC:")
+result = permutation_importance(svc_clf_rbf,x_test,y_test,n_repeats=1,random_state=0)
+features_names_cc = x_test.columns
+feature_importance = pd.DataFrame(result.importances, columns=['Importance'])
+feature_importance['Feature'] = features_names_cc
+print(feature_importance)
 #Sauvegarde des classifieurs
-dump(svc_clf_linear,"svc_clf.joblib")
+dump(svc_clf_rbf,"svc_clf.joblib")
 dump(dummycl,"dummycl.joblib")
 dump(neigh_clf,"neigh_clf.joblib")
 #Bayes=Categorical obliger
